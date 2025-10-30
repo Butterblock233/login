@@ -41,8 +41,8 @@ class CMCCLogin:
         初始化登录管理器
 
         Args:
-                username: 用户名/学号
-                password: 密码
+                        username: 用户名/学号
+                        password: 密码
         """
         # 创建初始参数对象
         self.params = CMCCParamater(username=username, password=password)
@@ -57,10 +57,10 @@ class CMCCLogin:
         从重定向页面解析校园网登录参数
 
         Args:
-                url: 重定向检测URL
+                        url: 重定向检测URL
 
         Returns:
-                self: 支持链式调用
+                        self: 支持链式调用
         """
         print(f"解析重定向: {url}")
         try:
@@ -118,7 +118,7 @@ class CMCCLogin:
         构造CMCC登录URL和请求头
 
         Returns:
-                tuple: (登录URL, 请求头字典)
+                        tuple: (登录URL, 请求头字典)
         """
         ts = int(time.time() * 1000)
         params = {
@@ -151,7 +151,7 @@ class CMCCLogin:
         执行完整的CMCC登录流程
 
         Returns:
-                str | None: 原始响应文本，失败时返回None
+                        str | None: 原始响应文本，失败时返回None
         """
         print("获取登录参数...")
 
@@ -173,58 +173,67 @@ class CMCCLogin:
         print("登录返回:", raw)
         return raw
 
-    def parse_result(self, raw: str) -> dict:
+    def parse_result(self, raw: str):
         """
-        解析CMCC登录结果
+        解析 CMCC 登录结果（JSONP 格式）
 
         Args:
-                raw: 原始响应文本
+                raw: 原始响应文本，如 dr171234567890({...})
 
         Returns:
-                dict: 解析后的结果字典
+                dict: 包含解析结果的字典，含状态码、消息、时间戳等
         """
         print("Raw Response:\n", raw)
 
-        # 1. 解析 JSONP
-        m = re.match(r"dr\d+\((.*)\)", raw)
-        if not m:
-            print("无法解析服务器响应。")
-            return {}
+        # 1. 解析 JSONP 外壳
+        json_match = re.match(r"dr(\d+)\((.*)\)", raw)
+        if not json_match:
+            print("无法解析服务器响应：不符合 JSONP 格式")
+            return {"error": "invalid_response", "raw": raw}
 
+        timestamp_ms_str, json_str = json_match.groups()
         try:
-            data = json.loads(m.group(1))
+            data = json.loads(json_str)
         except json.JSONDecodeError as e:
             print(f"JSON 解析失败: {e}")
-            return {}
+            return {"error": "json_decode_error", "raw": raw}
 
-        # 2. 解析返回码
-        result = data.get("result", "")
+        # 2. 提取关键字段
+        ret_code = data.get("ret_code") or data.get("result", "")
         msg = data.get("msg", "")
-        ret_code = data.get("ret_code", "")
+        uid = data.get("uid", "")
 
-        print(f"返回码: {ret_code}")
-        print(f"结果: {result}")
-        print(f"消息: {msg}")
+        # 3. 统一转为字符串（有些返回可能是 int）
+        if isinstance(ret_code, int):
+            ret_code = str(ret_code)
 
-        # 3. 根据返回码判断状态
-        if ret_code == "2":
-            print("登录成功！")
-        elif ret_code == "1":
-            print("登录失败：", msg)
-        else:
-            print("未知状态：", msg)
+        # 4. 状态码含义映射
+        STATUS_MAP = {
+            "1": "登录成功",
+            "8": "用户名或密码错误",
+            "logout_ok": "退出成功",
+        }
 
-        # 4. 打印请求时间
-        ts_str = re.match(r"^dr(\d+)", raw)
-        if ts_str:
-            print("请求时间：", datetime.fromtimestamp(int(ts_str.group(1)) // 1000))
+        status_msg = STATUS_MAP.get(ret_code, f"未知返回码: {ret_code}")
 
-        return {"ret_code": ret_code, "result": result, "msg": msg, "raw": raw}
+        # 5. 输出结果
+        print("\n[CMCC 登录结果]")
+        print(f"状态: {status_msg}")
+        if msg:
+            print(f"消息: {msg}")
+        if uid:
+            print(f"用户: {uid}")
+
+        # 6. 解析请求时间
+        try:
+            request_time = datetime.fromtimestamp(int(timestamp_ms_str) // 1000)
+            print(f"请求时间: {request_time}")
+        except (ValueError, OSError):
+            request_time = None
+            print("无法解析请求时间")
 
     def run(self):
-        result = self.login()
-        if result is not None:
-            print(self.parse_result(result))
+        self.login()
 
 
 if __name__ == "__main__":

@@ -1,9 +1,14 @@
 from src.cmcc_login import CMCCLogin, is_cmcc
+from src.config import config
 
 
 def main():
-    username: str = "username"
-    password: str = "password"
+    username = config.get("USERNAME")
+    password = config.get("PASSWORD")
+    if not username or not password:
+        print("Username or password not found")
+        return
+
     if is_cmcc():
         login = CMCCLogin(username, password)
         login.run()
