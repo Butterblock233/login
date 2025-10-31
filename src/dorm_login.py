@@ -1,8 +1,6 @@
 # pyright: standard
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-# 校园网自动登录脚本
-# 用法: 填写账号、密码后运行。会根据网络环境自动选择登录方式。
 
 import json
 import re
@@ -10,12 +8,6 @@ import time
 from datetime import datetime
 
 import requests
-
-from config import config
-
-# ====== 用户配置 ======
-username: str = config.get("USERNAME") or ""  # 学号/账号
-password: str = config.get("PASSWORD") or ""  # 密码
 
 # ====== 登录地址推测 ======
 # 有线网络通常是 192.168.115.8, CMCC 无线网络一般是 192.168.116.8
