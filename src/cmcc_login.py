@@ -1,3 +1,4 @@
+# pyright: standard
 import json
 import re
 import time
@@ -6,20 +7,6 @@ from typing import NamedTuple
 from urllib.parse import urlencode
 
 import requests
-
-
-def is_cmcc() -> bool:
-    import subprocess
-
-    wifi = subprocess.check_output(["netsh", "WLAN", "show", "interfaces"])
-    data = wifi.decode("utf-8")
-    ssid = "CMCC-PTU"
-    if ssid in data:
-        print(f"connected to {ssid}")
-        return True
-    else:
-        print(f"{ssid} not connected")
-        return False
 
 
 class CMCCParamater(NamedTuple):
@@ -41,8 +28,8 @@ class CMCCLogin:
         初始化登录管理器
 
         Args:
-                        username: 用户名/学号
-                        password: 密码
+                                        username: 用户名/学号
+                                        password: 密码
         """
         # 创建初始参数对象
         self.params = CMCCParamater(username=username, password=password)
@@ -57,38 +44,20 @@ class CMCCLogin:
         从重定向页面解析校园网登录参数
 
         Args:
-                        url: 重定向检测URL
+                                        url: 重定向检测URL
 
         Returns:
-                        self: 支持链式调用
+                                        self: 支持链式调用
         """
+        import re
+
+        from .redirect import parse_redirect
+
         print(f"解析重定向: {url}")
-        try:
-            resp = requests.get(url, timeout=5, allow_redirects=False)
-        except requests.RequestException as e:
-            print(f"获取重定向页面失败: {e}")
-            self.params = self.params._replace(wlan_ip="172.30.137.210")
-            return self
+        redirect_url = parse_redirect(url)
+        if redirect_url is None:
+            raise ValueError("无法解析重定向url")
 
-        redirect_url = None
-
-        # 1. 从 HTTP 头获取
-        if resp.status_code in [301, 302, 303, 307, 308]:
-            redirect_url = resp.headers.get("Location", "")
-            print(f"从 HTTP 头部获取到重定向 URL: {redirect_url}")
-        else:
-            # 2. 从 HTML 提取
-            m = re.search(r'location\.href\s*=\s*"(http[^"]+)"', resp.text)
-            if m:
-                redirect_url = m.group(1)
-                print(f"从 HTML 提取到重定向 URL: {redirect_url}")
-
-        if not redirect_url:
-            print("未能提取重定向 URL，使用默认参数。")
-            self.params = self.params._replace(wlan_ip="172.30.137.210")
-            return self
-
-        # 从重定向 URL 解析参数
         m = re.search(
             r"wlanuserip=([\d\.]+).*?wlanacname=([^&]+).*?wlanacip=([\d\.]+).*?(?:mac|wlanusermac)=([\w\-:]+)",
             redirect_url,
@@ -118,7 +87,7 @@ class CMCCLogin:
         构造CMCC登录URL和请求头
 
         Returns:
-                        tuple: (登录URL, 请求头字典)
+                                        tuple: (登录URL, 请求头字典)
         """
         ts = int(time.time() * 1000)
         params = {
@@ -151,7 +120,7 @@ class CMCCLogin:
         执行完整的CMCC登录流程
 
         Returns:
-                        str | None: 原始响应文本，失败时返回None
+                                        str | None: 原始响应文本，失败时返回None
         """
         print("获取登录参数...")
 
@@ -178,10 +147,10 @@ class CMCCLogin:
         解析 CMCC 登录结果（JSONP 格式）
 
         Args:
-                raw: 原始响应文本，如 dr171234567890({...})
+                        raw: 原始响应文本，如 dr171234567890({...})
 
         Returns:
-                dict: 包含解析结果的字典，含状态码、消息、时间戳等
+                        dict: 包含解析结果的字典，含状态码、消息、时间戳等
         """
         print("Raw Response:\n", raw)
 
@@ -233,9 +202,7 @@ class CMCCLogin:
             print("无法解析请求时间")
 
     def run(self):
-        self.login()
-
-
-if __name__ == "__main__":
-    login = CMCCLogin("username", "password")
-    login.run()
+        result = self.login()
+        if result is None:
+            return
+        self.parse_result(result)
