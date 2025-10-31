@@ -1,19 +1,21 @@
-from src.cmcc_login import CMCCLogin, is_cmcc
+# pyright: strict
+from src.cmcc_login import CMCCLogin
 from src.config import config
+from src.redirect import is_cmcc
 
 
 def main():
-    username = config.get("USERNAME")
-    password = config.get("PASSWORD")
-    if not username or not password:
-        print("Username or password not found")
+    username: str = config.get("USERNAME") or ""
+    password: str = config.get("PASSWORD") or ""
+    if username == "" or password == "":
+        print("username or password not found")
         return
 
     if is_cmcc():
         login = CMCCLogin(username, password)
         login.run()
     else:
-        from src.login import login_dorm
+        from src.dorm_login import login_dorm
 
         login_dorm(username, password)
 
