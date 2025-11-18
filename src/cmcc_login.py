@@ -28,8 +28,8 @@ class CMCCLogin:
         初始化登录管理器
 
         Args:
-                                        username: 用户名/学号
-                                        password: 密码
+            username: 用户名/学号
+            password: 密码
         """
         # 创建初始参数对象
         self.params = CMCCParamater(username=username, password=password)
@@ -56,7 +56,10 @@ class CMCCLogin:
         print(f"解析重定向: {url}")
         redirect_url = parse_redirect(url)
         if redirect_url is None:
-            raise ValueError("无法解析重定向url")
+            print("警告: 无法解析重定向URL，使用默认参数")
+            # 使用默认参数而不是抛出异常
+            self.params = self.params._replace(wlan_ip="172.30.137.210")
+            return self
 
         m = re.search(
             r"wlanuserip=([\d\.]+).*?wlanacname=([^&]+).*?wlanacip=([\d\.]+).*?(?:mac|wlanusermac)=([\w\-:]+)",
