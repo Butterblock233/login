@@ -28,14 +28,11 @@ class CMCCLogin:
         初始化登录管理器
 
         Args:
-                username: 用户名/学号
-                password: 密码
+                        username: 用户名/学号
+                        password: 密码
         """
         # 创建初始参数对象
         self.params = CMCCParamater(username=username, password=password)
-
-        # 在初始化时自动解析重定向获取完整参数
-        self.parse_redirect()
 
     def parse_redirect(
         self,
@@ -44,24 +41,25 @@ class CMCCLogin:
         从重定向页面解析校园网登录参数
 
         Args:
-                                                                        url: 重定向检测URL
+                                                                                                                                        url: 重定向检测URL
 
         Returns:
-                                                                        self: 支持链式调用
+                                                                                                                                        self: 支持链式调用
         """
         import re
 
         from .redirect import parse_redirect
 
-        print("解析重定向: https://www.msftconnecttest.com/redirect")
         redirect_url = parse_redirect()
+        if redirect_url == "ALREADY_LOGGED":
+            # 设置状态标志，保持方法链
+            self._already_logged = True
+            return self
         if redirect_url is None:
             print("警告: 无法解析重定向URL，使用默认参数")
             # 使用默认参数而不是抛出异常
             self.params = self.params._replace(wlan_ip="172.30.137.210")
             return self
-
-        print(redirect_url)
         m = re.search(
             r"wlanuserip=([\d\.]+).*?wlanacname=([^&]+).*?wlanacip=([\d\.]+).*?(?:mac|wlanusermac)=([\w\-:]+)",
             redirect_url,
@@ -91,7 +89,7 @@ class CMCCLogin:
         构造CMCC登录URL和请求头
 
         Returns:
-                tuple: (登录URL, 请求头字典)
+                        tuple: (登录URL, 请求头字典)
         """
         ts = int(time.time() * 1000)
         params = {
@@ -124,12 +122,14 @@ class CMCCLogin:
         执行完整的CMCC登录流程
 
         Returns:
-                str | None: 原始响应文本，失败时返回None
+                        str | None: 原始响应文本，失败时返回None
         """
-        print("获取登录参数...")
-
         # 1. 解析重定向获取完整参数
         self.parse_redirect()
+
+        # 检查是否已登录
+        if hasattr(self, "_already_logged") and self._already_logged:
+            return None
 
         # 2. 构造登录请求
         url, headers = self.construct_url()
@@ -151,13 +151,11 @@ class CMCCLogin:
         解析 CMCC 登录结果（JSONP 格式）
 
         Args:
-                raw: 原始响应文本，如 dr171234567890({...})
+                        raw: 原始响应文本，如 dr171234567890({...})
 
         Returns:
-                dict: 包含解析结果的字典，含状态码、消息、时间戳等
+                        dict: 包含解析结果的字典，含状态码、消息、时间戳等
         """
-        print("Raw Response:\n", raw)
-
         # 1. 解析 JSONP 外壳
         json_match = re.match(r"dr(\d+)\((.*)\)", raw)
         if not json_match:

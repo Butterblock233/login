@@ -27,7 +27,6 @@ def get_redirect_response(
         result: Response = s.get(
             url, timeout=timeout, proxies=None, allow_redirects=False, verify=False
         )
-        print(result.headers)
         return result
     except Exception as e:
         print(f"Failed to get redirect url {e}")
@@ -40,20 +39,17 @@ def parse_redirect(resp: Response = get_redirect_response()) -> str | None:
 
     Args:
             resp: 从重定向url获取的响应
-            max_retries: 最大重试次数
 
     Returns:
             str: 用于登录的url
     """
-
-    print(resp.headers)
 
     # 1. 从 HTTP 头获取
     if resp.status_code in [301, 302, 303, 307, 308]:
         redirect_url = resp.headers.get("Location", "")
         if "go.microsoft.com" in redirect_url:
             print("该设备已经登录过了")
-            return None
+            return "ALREADY_LOGGED"
         elif redirect_url:
             print(f"从 HTTP headers获取到重定向 URL: {redirect_url}")
             return redirect_url
