@@ -11,3 +11,8 @@ wheels/
 **/.env
 .git.bfg-report/**
 bfg-*.jar
+tmp/check.py
+tmp/parsing.py
+tmp/ref.md
+tmp/replace.txt
+tmp/ssid.py

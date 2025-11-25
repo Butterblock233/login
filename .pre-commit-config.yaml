@@ -1,0 +1,18 @@
+# .pre-commit-config.yaml
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.6.0
+    hooks:
+      - id: check-yaml
+      - id: end-of-file-fixer
+      - id: trailing-whitespace
+
+  # 使用 local hook 调用 Just
+  - repo: local
+    hooks:
+      - id: just-pre-commit
+        name: Run Just pre-commit checks
+        entry: just tidy
+        language: system
+        pass_filenames: false
+        always_run: true
