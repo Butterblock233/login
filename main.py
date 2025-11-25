@@ -12,6 +12,7 @@ def main():
         return
 
     if is_cmcc():
+        print("CMCC connected")
         login = CMCCLogin(username, password)
         login.run()
     else:
